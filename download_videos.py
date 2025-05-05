@@ -1,9 +1,9 @@
 import os
 import sys
 import time
+from datetime import timedelta
 
 import pandas as pd
-from tqdm import tqdm
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "bilibili-downloader"))
 
@@ -42,7 +42,6 @@ class TigerStrategy(DefaultStrategy):
 
 class TigerDownloader(BilibiliDownloader):
     def download_video(self, video) -> None:
-        print(f"[{video.bvid}] {video.title}")
         save_path = os.path.join(config.OUTPUT_PATH, video.bvid + ".mp4")
         self._download(video.video_url, save_path)
 
@@ -66,23 +65,22 @@ class BFacade:
 
     def download(self, bvid_list):
         os.makedirs(config.OUTPUT_PATH, exist_ok=True)
-        for bvid in tqdm(bvid_list):
+        for idx, bvid in enumerate(bvid_list):
+            print(f"[{idx + 1}/{len(bvid_list)}] {bvid}")
+
             try:
                 video = self.crawler.get(bvid)
                 self.downloader.download_video(video)
             except Exception as e:
                 print(f"[{bvid}] {e}")
 
+            cur_time = time.time() - start_time
+            eta_time = cur_time / (idx + 1) * (len(bvid_list) - idx)
+            print(f"已用时 {timedelta(0, cur_time)} 剩余用时 {timedelta(0, eta_time)}")
+
 
 if __name__ == "__main__":
     start_time = time.time()
 
-    df = pd.read_csv("../tiger200k_batch0.csv")
+    df = pd.read_csv("meta_csv/tiger200k_batchxxx.csv")
     BFacade().download(set(df["bvid"].tolist()))
-
-    end_time = time.time()
-    times = round(end_time - start_time)
-    minutes = times // 60
-    times %= 60
-    seconds = times
-    print(f"Time elapsed: {minutes} min {seconds} sec")
